@@ -1,0 +1,39 @@
+function [dffDataFirst20s,CumDffDataFirst20s,CumData] = makeCumPixWholeEXPstacks(FPS,reg_Stacks,numZplanes,sec_before_stim_start)
+disp('Making DF/F, cumulative pixel intensity, and cumulative DF/F stacks')
+%make baseline image 
+baselineIms = cell(1,length(reg_Stacks));
+for stack = 1:length(reg_Stacks)
+    baselineIms{stack} = mean(reg_Stacks{stack}(:,:,1:ceil((FPS/numZplanes)*(sec_before_stim_start/2))),3);
+end 
+
+%create df/f stack relative to the first half of the prestim period 
+dffDataFirst20s = cell(1,length(reg_Stacks) );
+for stack = 1:length(reg_Stacks) 
+    dffDataFirst20s{stack} = (double(reg_Stacks{stack})-repmat(baselineIms{stack},[1 1 size(double(reg_Stacks{stack}),3)]))./repmat(baselineIms{stack},[1 1 size(double(reg_Stacks{stack}),3)]);
+    dffDataFirst20s{stack} = int16(dffDataFirst20s{stack});
+end 
+
+%create cumulative df/f stacks normalized to baseline
+CumDffDataFirst20s = cell(1,length(reg_Stacks));
+for stack = 1:length(reg_Stacks)
+    for frame = 1:size(reg_Stacks{1},3)
+        if frame == 1
+            CumDffDataFirst20s{stack}(:,:,frame) = dffDataFirst20s{stack}(:,:,frame);
+        elseif frame > 1
+            CumDffDataFirst20s{stack}(:,:,frame) = CumDffDataFirst20s{stack}(:,:,frame-1) + dffDataFirst20s{stack}(:,:,frame); %sum(dffStacksFirst20s{stack}(:,:,1:frame),3);
+        end 
+    end                 
+end 
+
+%create cumulative pixel intensity stacks
+CumData = cell(1,length(reg_Stacks));
+for stack = 1:length(reg_Stacks)
+    for frame = 1:size(reg_Stacks{1},3)
+        if frame == 1
+            CumData{stack}(:,:,frame) = reg_Stacks{stack}(:,:,frame);
+        elseif frame > 1
+            CumData{stack}(:,:,frame) = CumData{stack}(:,:,frame-1) + reg_Stacks{stack}(:,:,frame); %sum(dffStacksFirst20s{stack}(:,:,1:frame),3);
+        end 
+    end                 
+end 
+end 
